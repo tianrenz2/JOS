@@ -160,7 +160,9 @@ mem_init(void)
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
-
+	size_t Env_size = sizeof(struct Env);
+	envs = (struct Env *) boot_alloc(NENV * Env_size);
+	memset(envs, 0, NENV * Env_size);
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
 	// up the list of free physical pages. Once we've done so, all further
@@ -242,6 +244,8 @@ mem_init(void)
 
 	// Some more checks, only possible after kern_pgdir is installed.
 	check_page_installed_pgdir();
+
+
 }
 
 // --------------------------------------------------------------
