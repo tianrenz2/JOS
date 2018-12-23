@@ -23,7 +23,8 @@ struct Command {
 
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
-	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "backtrace", "Stack backtrace", mon_backtrace},
+	{ "kerninfo", "Display information about the kernel", mon_help },
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -58,6 +59,19 @@ int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
 	// Your code here.
+	cprintf("mon_backtrace function\n");
+	// cprintf("%d\n", (int)read_ebp());
+	uint32_t ebp = read_ebp();
+	// cprintf("%p\n", ebp);
+	uint32_t *eip = (uint32_t *) (ebp + 1);
+	// cprintf("%p\n", eip);
+	uint32_t *p;
+	while(ebp != 0){
+		p = (uint32_t *)ebp;
+		cprintf("ebp %x eip %x args %08x %08x %08x %08x %08x\n", ebp, p[1], p[2], p[3], p[4],p[5], p[6]);
+		ebp = p[0];
+	}
+
 	return 0;
 }
 
@@ -90,7 +104,9 @@ runcmd(char *buf, struct Trapframe *tf)
 			cprintf("Too many arguments (max %d)\n", MAXARGS);
 			return 0;
 		}
+		cprintf("Buf: %s\n", buf);
 		argv[argc++] = buf;
+		cprintf("After Buf: %s\n", argv[0]);
 		while (*buf && !strchr(WHITESPACE, *buf))
 			buf++;
 	}
@@ -99,6 +115,7 @@ runcmd(char *buf, struct Trapframe *tf)
 	// Lookup and invoke the command
 	if (argc == 0)
 		return 0;
+	cprintf("Command: %s\n", argv[0]);
 	for (i = 0; i < ARRAY_SIZE(commands); i++) {
 		if (strcmp(argv[0], commands[i].name) == 0)
 			return commands[i].func(argc, argv, tf);
