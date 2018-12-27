@@ -24,9 +24,10 @@ struct Command {
 
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
-	{ "backtrace", "Stack backtrace", mon_backtrace},
-	{ "kerninfo", "Display information about the kernel", mon_help },
+	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "backtrace", "Display backtrace info", mon_backtrace },
 };
+#define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
 /***** Implementations of basic kernel monitor commands *****/
 
@@ -35,7 +36,7 @@ mon_help(int argc, char **argv, struct Trapframe *tf)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(commands); i++)
+	for (i = 0; i < NCOMMANDS; i++)
 		cprintf("%s - %s\n", commands[i].name, commands[i].desc);
 	return 0;
 }
@@ -59,20 +60,24 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	// Your code here.
-	cprintf("mon_backtrace function\n");
-	// cprintf("%d\n", (int)read_ebp());
-	uint32_t ebp = read_ebp();
-	// cprintf("%p\n", ebp);
-	uint32_t *eip = (uint32_t *) (ebp + 1);
-	// cprintf("%p\n", eip);
-	uint32_t *p;
-	while(ebp != 0){
-		p = (uint32_t *)ebp;
-		cprintf("ebp %x eip %x args %08x %08x %08x %08x %08x\n", ebp, p[1], p[2], p[3], p[4],p[5], p[6]);
-		ebp = p[0];
-	}
+    uint32_t ebp, eip, *p;
+    struct Eipdebuginfo info;
 
+    ebp = read_ebp();
+    while (ebp != 0)
+    {
+        p = (uint32_t *) ebp;
+        eip = p[1];
+        cprintf("ebp %x eip %x args %08x %08x %08x %08x %08x\n", ebp, eip, p[2], p[3], p[4], p[5], p[6]);
+        if (debuginfo_eip(eip, &info) == 0)
+        {
+            int fn_offset = eip - info.eip_fn_addr;
+
+            cprintf("%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen, info.eip_fn_name, fn_offset);
+        }
+        ebp = p[0];
+    }
+    
 	return 0;
 }
 
@@ -105,9 +110,7 @@ runcmd(char *buf, struct Trapframe *tf)
 			cprintf("Too many arguments (max %d)\n", MAXARGS);
 			return 0;
 		}
-		cprintf("Buf: %s\n", buf);
 		argv[argc++] = buf;
-		cprintf("After Buf: %s\n", argv[0]);
 		while (*buf && !strchr(WHITESPACE, *buf))
 			buf++;
 	}
@@ -116,8 +119,7 @@ runcmd(char *buf, struct Trapframe *tf)
 	// Lookup and invoke the command
 	if (argc == 0)
 		return 0;
-	cprintf("Command: %s\n", argv[0]);
-	for (i = 0; i < ARRAY_SIZE(commands); i++) {
+	for (i = 0; i < NCOMMANDS; i++) {
 		if (strcmp(argv[0], commands[i].name) == 0)
 			return commands[i].func(argc, argv, tf);
 	}

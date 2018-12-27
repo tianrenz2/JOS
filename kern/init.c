@@ -27,6 +27,18 @@ i386_init(void)
 	cons_init();
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
+    {
+        int x = 1, y = 3, z = 4;
+    Lab1_exercise8_3:
+        cprintf("x %d, y %x, z %d\n", x, y, z);
+    Lab1_exercise8_5:
+        cprintf("x=%d y=%d", 3);
+    }
+    {
+        unsigned int i = 0x000a646c;
+    Lab1_exercise8_4:
+        cprintf("H%x Wor%s", 57616, &i);
+    }
 
 	// Lab 2 memory management initialization functions
 	mem_init();
@@ -68,7 +80,7 @@ _panic(const char *file, int line, const char *fmt,...)
 	panicstr = fmt;
 
 	// Be extra sure that the machine is in as reasonable state
-	asm volatile("cli; cld");
+	__asm __volatile("cli; cld");
 
 	va_start(ap, fmt);
 	cprintf("kernel panic at %s:%d: ", file, line);

@@ -151,12 +151,12 @@ typedef uint32_t pde_t;
  *
  * One result of treating the page directory as a page table is that all PTEs
  * can be accessed through a "virtual page table" at virtual address UVPT (to
- * which uvpt is set in lib/entry.S).  The PTE for page number N is stored in
+ * which uvpt is set in entry.S).  The PTE for page number N is stored in
  * uvpt[N].  (It's worth drawing a diagram of this!)
  *
  * A second consequence is that the contents of the current page directory
  * will always be available at virtual address (UVPT + (UVPT >> PGSHIFT)), to
- * which uvpd is set in lib/entry.S.
+ * which uvpd is set in entry.S.
  */
 extern volatile pte_t uvpt[];     // VA of "virtual page table"
 extern volatile pde_t uvpd[];     // VA of current page directory
