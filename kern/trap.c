@@ -93,8 +93,24 @@ trap_init(void)
     void handler18();
     void handler19();
 
-    void handler_syscall();
+    void IRQ_handler0();
+    void IRQ_handler1();
+    void IRQ_handler2();
+    void IRQ_handler3();
+    void IRQ_handler4();
+    void IRQ_handler5();
+    void IRQ_handler6();
+    void IRQ_handler7();
+    void IRQ_handler8();
+    void IRQ_handler9();
+    void IRQ_handler10();
+    void IRQ_handler11();
+    void IRQ_handler12();
+    void IRQ_handler13();
+    void IRQ_handler14();
 
+
+    void handler_syscall();
 
     SETGATE(idt[0], 0, GD_KT, handler0, 0);
     SETGATE(idt[1], 0, GD_KT, handler1, 0);
@@ -117,8 +133,13 @@ trap_init(void)
     SETGATE(idt[18], 0, GD_KT, handler18, 0);
     SETGATE(idt[19], 0, GD_KT, handler19, 0);
 
-    SETGATE(idt[T_SYSCALL], 0, GD_KT, handler_syscall, 3);
+	for (int i = 0; i < 15; i++) {
+		SETGATE(idt[IRQ_OFFSET + i], false, GD_KT, irq_error, 0);
+	}
 
+	SETGATE(idt[IRQ_OFFSET + IRQ_TIMER], false, GD_KT, irq_timer, 0);
+
+    SETGATE(idt[T_SYSCALL], 0, GD_KT, handler_syscall, 3);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -271,7 +292,10 @@ trap_dispatch(struct Trapframe *tf)
             tf->tf_regs.reg_esi);
         tf->tf_regs.reg_eax = syscall_ret;
         return;
+    }else if(tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER){
+    	sched_yield();
     }
+
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
@@ -309,7 +333,7 @@ trap(struct Trapframe *tf)
 		// serious kernel work.
 		// LAB 4: Your code here.
 		assert(curenv);
-
+		lock_kernel();
 		// Garbage collect if current enviroment is a zombie
 		if (curenv->env_status == ENV_DYING) {
 			env_free(curenv);
@@ -353,7 +377,9 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
-
+	if ((tf->tf_cs & 3) == 0) {
+		panic("kernel page fault at: %x", fault_va);
+	}
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
 
@@ -387,11 +413,35 @@ page_fault_handler(struct Trapframe *tf)
 	//   (the 'tf' variable points at 'curenv->env_tf').
 
 	// LAB 4: Your code here.
+	if(curenv->env_pgfault_upcall != NULL){
+		uintptr_t esp;
 
-	// Destroy the environment that caused the fault.
-	cprintf("[%08x] user fault va %08x ip %08x\n",
-		curenv->env_id, fault_va, tf->tf_eip);
-	print_trapframe(tf);
-	env_destroy(curenv);
+	    if (tf->tf_esp > UXSTACKTOP - PGSIZE && tf->tf_esp < UXSTACKTOP) {
+	        esp = tf->tf_esp - 4 - sizeof(struct UTrapframe);   
+	    } else {
+	        esp = UXSTACKTOP - sizeof(struct UTrapframe);
+	    }
+
+	    user_mem_assert(curenv, (void *) esp, sizeof(struct UTrapframe), PTE_W | PTE_U | PTE_P);
+
+	    struct UTrapframe *utf = (struct UTrapframe *) (esp);
+	    utf->utf_fault_va = fault_va;
+	    utf->utf_err = tf->tf_err;
+	    utf->utf_regs = tf->tf_regs;
+	    utf->utf_eip = tf->tf_eip;
+	    utf->utf_eflags = tf->tf_eflags;
+	    utf->utf_esp = tf->tf_esp;
+
+	    tf->tf_esp = esp;
+	    tf->tf_eip = (uintptr_t) curenv->env_pgfault_upcall;
+	    env_run(curenv);
+	}
+
+		// Destroy the environment that caused the fault.
+		cprintf("[%08x] user fault va %08x ip %08x\n",
+			curenv->env_id, fault_va, tf->tf_eip);
+		print_trapframe(tf);
+		env_destroy(curenv);
+
 }
 

@@ -77,6 +77,9 @@ TRAPHANDLER_NOEC(handler19, T_SIMDERR)
 TRAPHANDLER_NOEC(handler_syscall, T_SYSCALL)
 
 
+TRAPHANDLER_NOEC(irq_timer, IRQ_OFFSET + IRQ_TIMER);
+TRAPHANDLER_NOEC(IRQ_error, IRQ_OFFSET + IRQ_ERROR);
+
 /*
  * Lab 3: Your code here for _alltraps
  */
