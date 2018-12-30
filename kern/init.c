@@ -33,6 +33,18 @@ i386_init(void)
 	cons_init();
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
+    {
+        int x = 1, y = 3, z = 4;
+    Lab1_exercise8_3:
+        cprintf("x %d, y %x, z %d\n", x, y, z);
+    Lab1_exercise8_5:
+        cprintf("x=%d y=%d", 3);
+    }
+    {
+        unsigned int i = 0x000a646c;
+    Lab1_exercise8_4:
+        cprintf("H%x Wor%s", 57616, &i);
+    }
 
 	// Lab 2 memory management initialization functions
 	mem_init();
@@ -50,6 +62,7 @@ i386_init(void)
 
 	// Acquire the big kernel lock before waking up APs
 	// Your code here:
+	lock_kernel();
 
 	// Starting non-boot CPUs
 	boot_aps();
@@ -57,6 +70,7 @@ i386_init(void)
 	// Start fs.
 	ENV_CREATE(fs_fs, ENV_TYPE_FS);
 
+	unlock_kernel();
 #if defined(TEST)
 	// Don't touch -- used by grading script!
 	ENV_CREATE(TEST, ENV_TYPE_USER);
@@ -122,7 +136,8 @@ mp_main(void)
 	// only one CPU can enter the scheduler at a time!
 	//
 	// Your code here:
-
+	mp_main();
+	sched_yield();
 	// Remove this after you finish Exercise 6
 	for (;;);
 }
@@ -147,7 +162,7 @@ _panic(const char *file, int line, const char *fmt,...)
 	panicstr = fmt;
 
 	// Be extra sure that the machine is in as reasonable state
-	asm volatile("cli; cld");
+	__asm __volatile("cli; cld");
 
 	va_start(ap, fmt);
 	cprintf("kernel panic on CPU %d at %s:%d: ", cpunum(), file, line);
