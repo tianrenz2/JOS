@@ -30,6 +30,32 @@ sched_yield(void)
 
 	// LAB 4: Your code here.
 
+	idle = curenv;
+
+	int i, j;
+	int found_runnable = 0;
+
+	if(!idle){
+		i = 1;
+	}else{
+		i = 0;
+	}
+
+	for(j = 0; j < NENV; j++; i = (i+1)%(NENV)){
+		if(envs[i].env_status == ENV_RUNNABLE){
+			found_runnable = 1;
+			env_run(envs + i);
+		}
+	}
+
+	if(!found_runnable){
+		for(i = 0; i != NENV; i++; ){
+			if(envs[i].env_status == ENV_RUNNING && envs[i].env_id == pre_env->env_id){
+				found_runnable = 1;
+				env_run(pre_env);
+			}
+		}
+	}
 	// sched_halt never returns
 	sched_halt();
 }
